@@ -1,0 +1,4 @@
+__pycache__/
+*.log
+.pyq_snippet_state
+.fitness_snippet_state

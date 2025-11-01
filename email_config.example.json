@@ -1,0 +1,12 @@
+{
+  "smtp_server": "smtp.gmail.com",
+  "smtp_port": 587,
+  "use_tls": true,
+  "use_ssl": false,
+  "username": "your_smtp_username",
+  "password": "app_specific_password",
+  "from_addr": "sender@example.com",
+  "to_addrs": [
+    "recipient@example.com"
+  ]
+}
