@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """
-Send a poetic fitness snippet email using sequential rotation through fitness-poetic.md.
+Send a poetic fitness snippet email, rotating sequentially or by explicit index override.
 """
 from __future__ import annotations
 
+import argparse
 import email.message
+import os
 import pathlib
 import re
 import smtplib
 import ssl
 from typing import List, Tuple
 
-CONFIG = {
+DEFAULT_CONFIG = {
     "host": "smtp.exmail.qq.com",
     "port": 465,
     "username": "jackie@minteche.com",
@@ -23,6 +25,17 @@ CONFIG = {
 ROOT = pathlib.Path(__file__).resolve().parent
 MARKDOWN_PATH = ROOT / "fitness-poetic.md"
 STATE_PATH = ROOT / ".fitness_snippet_state"
+
+
+def load_config() -> dict:
+    return {
+        "host": os.environ.get("SMTP_HOST", DEFAULT_CONFIG["host"]),
+        "port": int(os.environ.get("SMTP_PORT", DEFAULT_CONFIG["port"])),
+        "username": os.environ.get("SMTP_USERNAME", DEFAULT_CONFIG["username"]),
+        "password": os.environ.get("SMTP_PASSWORD", DEFAULT_CONFIG["password"]),
+        "from_name": os.environ.get("FROM_NAME", DEFAULT_CONFIG["from_name"]),
+        "recipient": os.environ.get("SMTP_RECIPIENT", DEFAULT_CONFIG["recipient"]),
+    }
 
 
 def load_sections(path: pathlib.Path) -> List[Tuple[str, str]]:
@@ -53,29 +66,47 @@ def pick_next_section(sections: List[Tuple[str, str]], state_path: pathlib.Path)
     return next_index, sections[next_index]
 
 
-def build_message(subject_suffix: str, heading: str, body: str) -> email.message.EmailMessage:
+def build_message(config: dict, subject_suffix: str, heading: str, body: str) -> email.message.EmailMessage:
     message = email.message.EmailMessage()
-    message["From"] = f"{CONFIG['from_name']} <{CONFIG['username']}>"
-    message["To"] = CONFIG["recipient"]
+    message["From"] = f"{config['from_name']} <{config['username']}>"
+    message["To"] = config["recipient"]
     message["Subject"] = f"健身文案日更 - {subject_suffix}"
     message.set_content(f"{heading}\n\n{body}")
     return message
 
 
-def send_email(message: email.message.EmailMessage) -> None:
+def send_email(config: dict, message: email.message.EmailMessage) -> None:
     context = ssl.create_default_context()
-    with smtplib.SMTP_SSL(CONFIG["host"], CONFIG["port"], context=context, timeout=20) as smtp:
-        smtp.login(CONFIG["username"], CONFIG["password"])
+    with smtplib.SMTP_SSL(config["host"], config["port"], context=context, timeout=20) as smtp:
+        smtp.login(config["username"], config["password"])
         smtp.send_message(message)
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Send poetic fitness snippet email.")
+    parser.add_argument(
+        "--index",
+        type=int,
+        help="Override sequential rotation with a 0-based section index.",
+    )
+    args = parser.parse_args()
+
+    config = load_config()
     sections = load_sections(MARKDOWN_PATH)
-    next_index, (heading, body) = pick_next_section(sections, STATE_PATH)
+
+    if args.index is not None:
+        index = args.index % len(sections)
+        heading, body = sections[index]
+    else:
+        index, (heading, body) = pick_next_section(sections, STATE_PATH)
+
     subject_suffix = heading.replace("##", "").strip()
-    message = build_message(subject_suffix, heading, body)
-    send_email(message)
-    STATE_PATH.write_text(str(next_index), encoding="utf-8")
+    message = build_message(config, subject_suffix, heading, body)
+    send_email(config, message)
+
+    if args.index is None:
+        STATE_PATH.write_text(str(index), encoding="utf-8")
+
     print(f"Fitness email sent for {heading}.")
 
 
