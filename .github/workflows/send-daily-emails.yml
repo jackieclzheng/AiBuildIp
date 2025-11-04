@@ -3,10 +3,6 @@ name: Send Daily Emails
 on:
   schedule:
     - cron: '0 3 * * *'   # 11:00 China Standard Time
-    - cron: '25 11 * * *' # 19:25 CST
-    - cron: '48 11 * * *' # 19:48 CST
-    - cron: '20 14 * * *' # 22:20 CST (testing slot)
-    - cron: '21 14 * * *' # 22:21 CST (testing slot)
   workflow_dispatch:
     inputs:
       run-slot:
@@ -18,7 +14,7 @@ jobs:
   send:
     runs-on: ubuntu-latest
     env:
-      RUNS_PER_DAY: '5'
+      RUNS_PER_DAY: '1'
       START_DATE: '2024-11-01'
       PYQ_OFFSET: '0'
       FITNESS_OFFSET: '0'
@@ -37,10 +33,6 @@ jobs:
           if [ "${{ github.event_name }}" = "schedule" ]; then
             case "${{ github.event.schedule }}" in
               '0 3 * * *') SLOT=0 ;;
-              '25 11 * * *') SLOT=1 ;;
-              '48 11 * * *') SLOT=2 ;;
-              '20 14 * * *') SLOT=3 ;;
-              '21 14 * * *') SLOT=4 ;;
               *) echo "Unknown schedule: ${{ github.event.schedule }}"; exit 1 ;;
             esac
           else
