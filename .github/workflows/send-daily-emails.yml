@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       run-slot:
-        description: 'Manual run slot (0-4)'
+        description: 'Manual run slot (0)'
         required: false
         default: '0'
 
