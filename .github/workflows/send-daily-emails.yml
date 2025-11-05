@@ -57,7 +57,25 @@ jobs:
           echo "PYQ_INDEX=$PYQ_INDEX" >> "$GITHUB_ENV"
           echo "FITNESS_INDEX=$FITNESS_INDEX" >> "$GITHUB_ENV"
 
+      - name: Determine local send date
+        id: today
+        run: |
+          TODAY=$(TZ=Asia/Shanghai date +%Y-%m-%d)
+          echo "today=$TODAY" >> "$GITHUB_OUTPUT"
+
+      - name: Check PyQ send history
+        id: cache-pyq
+        uses: actions/cache@v4
+        with:
+          path: .workflow-cache/pyq
+          key: pyq-${{ steps.today.outputs.today }}
+
+      - name: PyQ already sent today
+        if: steps.cache-pyq.outputs.cache-hit == 'true'
+        run: echo "PyQ email already sent for ${{ steps.today.outputs.today }}; skipping."
+
       - name: Send PyQ snippet
+        if: steps.cache-pyq.outputs.cache-hit != 'true'
         env:
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
@@ -67,7 +85,25 @@ jobs:
           SMTP_RECIPIENT: ${{ secrets.SMTP_RECIPIENT }}
         run: python send_pyq_snippet.py --index "$PYQ_INDEX"
 
+      - name: Mark PyQ as sent
+        if: steps.cache-pyq.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p .workflow-cache/pyq
+          echo "${{ steps.today.outputs.today }}" > .workflow-cache/pyq/last_sent
+
+      - name: Check fitness send history
+        id: cache-fitness
+        uses: actions/cache@v4
+        with:
+          path: .workflow-cache/fitness
+          key: fitness-${{ steps.today.outputs.today }}
+
+      - name: Fitness already sent today
+        if: steps.cache-fitness.outputs.cache-hit == 'true'
+        run: echo "Fitness email already sent for ${{ steps.today.outputs.today }}; skipping."
+
       - name: Send fitness snippet
+        if: steps.cache-fitness.outputs.cache-hit != 'true'
         env:
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
@@ -76,3 +112,9 @@ jobs:
           FROM_NAME: ${{ secrets.FROM_NAME }}
           SMTP_RECIPIENT: ${{ secrets.SMTP_RECIPIENT }}
         run: python send_fitness_snippet.py --index "$FITNESS_INDEX"
+
+      - name: Mark fitness as sent
+        if: steps.cache-fitness.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p .workflow-cache/fitness
+          echo "${{ steps.today.outputs.today }}" > .workflow-cache/fitness/last_sent
