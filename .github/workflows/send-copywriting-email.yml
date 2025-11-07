@@ -1,0 +1,27 @@
+name: Send Copywriting Email
+
+on:
+  schedule:
+    - cron: '20 2 * * *'   # 10:20 China Standard Time
+
+jobs:
+  send-copywriting:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Send copywriting digest
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          FROM_NAME: ${{ secrets.FROM_NAME }}
+          SMTP_RECIPIENT: ${{ secrets.SMTP_RECIPIENT || '274175813@qq.com' }}
+        run: python send_copywriting_digest.py --subject-prefix "10:20自动播报"

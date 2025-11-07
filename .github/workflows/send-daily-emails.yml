@@ -3,12 +3,6 @@ name: Send Daily Emails
 on:
   schedule:
     - cron: '0 3 * * *'   # 11:00 China Standard Time
-  workflow_dispatch:
-    inputs:
-      run-slot:
-        description: 'Manual run slot (0)'
-        required: false
-        default: '0'
 
 jobs:
   send:
@@ -27,23 +21,10 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Determine run slot
-        id: slot
-        run: |
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            case "${{ github.event.schedule }}" in
-              '0 3 * * *') SLOT=0 ;;
-              *) echo "Unknown schedule: ${{ github.event.schedule }}"; exit 1 ;;
-            esac
-          else
-            SLOT="${{ inputs.run-slot }}"
-          fi
-          echo "slot=${SLOT}" >> "$GITHUB_OUTPUT"
-
       - name: Compute rotation indices
         id: rotation
         run: |
-          SLOT=${{ steps.slot.outputs.slot }}
+          SLOT=0
           START_SECS=$(date -u -d "$START_DATE" +%s)
           NOW_SECS=$(date -u +%s)
           if [ "$NOW_SECS" -lt "$START_SECS" ]; then
