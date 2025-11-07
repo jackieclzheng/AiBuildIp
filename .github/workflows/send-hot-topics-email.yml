@@ -1,0 +1,27 @@
+name: Send Hot Topic Copywriting
+
+on:
+  schedule:
+    - cron: '30 1 * * *'   # 09:30 China Standard Time
+
+jobs:
+  send-hot-topics:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Send hot topic digest
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          FROM_NAME: ${{ secrets.FROM_NAME }}
+          SMTP_RECIPIENT: ${{ secrets.SMTP_RECIPIENT }}
+        run: python send_hot_topics_digest.py --count 3 --subject-prefix "9:30热点选题"
