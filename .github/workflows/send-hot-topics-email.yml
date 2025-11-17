@@ -11,6 +11,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Restore hot-topic rotation state
+        uses: actions/cache@v4
+        with:
+          path: .hot_topics_digest_state_AI_Knowledge_Paid_Courses_Chinese
+          key: hot-topics-digest-${{ github.run_id }}
+          restore-keys: |
+            hot-topics-digest-
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -24,4 +32,5 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           FROM_NAME: ${{ secrets.FROM_NAME }}
           SMTP_RECIPIENT: ${{ secrets.SMTP_RECIPIENT }}
+          HOT_TOPICS_SOURCE: AI_Knowledge_Paid_Courses_Chinese.csv
         run: python send_hot_topics_digest.py --count 3 --subject-prefix "9:30热点选题"

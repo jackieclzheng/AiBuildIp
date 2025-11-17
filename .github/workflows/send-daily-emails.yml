@@ -11,7 +11,7 @@ jobs:
       RUNS_PER_DAY: '1'
       START_DATE: '2024-11-01'
       PYQ_OFFSET: '0'
-      FITNESS_OFFSET: '0'
+      FITNESS_OFFSET: '18'  # shift rotation so 2025-11-18 sends第11篇
     steps:
       - name: Checkout
         uses: actions/checkout@v4

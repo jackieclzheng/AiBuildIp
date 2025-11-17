@@ -11,6 +11,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Restore copywriting rotation state
+        uses: actions/cache@v4
+        with:
+          path: .copywriting_digest_state
+          key: copywriting-digest-${{ github.run_id }}
+          restore-keys: |
+            copywriting-digest-
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

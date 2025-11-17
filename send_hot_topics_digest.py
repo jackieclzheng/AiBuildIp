@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-Daily digest sender for hot short-video topics.
+Daily digest sender for hot-topic ideas.
 
-Reads `hot-video-topics-copywriting.md`, rotates through entries, and emails
-三组（默认）朋友圈 + 小红书文案组合。
+Supports the original Markdown copywriting source as well as the new
+`AI_Knowledge_Paid_Courses_Chinese.csv` list of 课程选题，并按照轮询发送。
 """
 from __future__ import annotations
 
 import argparse
+import csv
 import email.message
 import os
 import pathlib
@@ -29,15 +30,24 @@ DEFAULT_CONFIG = {
 }
 
 ROOT = pathlib.Path(__file__).resolve().parent
-COPY_PATH = pathlib.Path(os.environ.get("HOT_TOPICS_MARKDOWN") or (ROOT / "hot-video-topics-copywriting.md"))
-STATE_PATH = ROOT / ".hot_topics_digest_state"
+DEFAULT_TOPIC_FILE = "AI_Knowledge_Paid_Courses_Chinese.csv"
+SOURCE_PATH_STRING = os.environ.get("HOT_TOPICS_SOURCE") or os.environ.get("HOT_TOPICS_MARKDOWN")
+if SOURCE_PATH_STRING:
+    copy_candidate = pathlib.Path(SOURCE_PATH_STRING)
+    if not copy_candidate.is_absolute():
+        COPY_PATH = ROOT / copy_candidate
+    else:
+        COPY_PATH = copy_candidate
+else:
+    COPY_PATH = ROOT / DEFAULT_TOPIC_FILE
+STATE_PATH = ROOT / f".hot_topics_digest_state_{COPY_PATH.stem}"
 
 
 @dataclass
 class TopicEntry:
     title: str
-    pyq: str
-    xhs: str
+    pyq: str | None = None
+    xhs: str | None = None
 
 
 def load_config() -> Dict[str, str]:
@@ -74,6 +84,35 @@ def parse_markdown(path: pathlib.Path) -> List[TopicEntry]:
     return entries
 
 
+def parse_csv(path: pathlib.Path) -> List[TopicEntry]:
+    if not path.exists():
+        raise FileNotFoundError(f"Topic CSV file not found: {path}")
+    entries: List[TopicEntry] = []
+    with path.open(encoding="utf-8", newline="") as fh:
+        reader = csv.reader(fh)
+        for row in reader:
+            if not row:
+                continue
+            title = row[0].strip()
+            if not title:
+                continue
+            if title == "AI课程选题":
+                continue
+            entries.append(TopicEntry(title=title))
+    if not entries:
+        raise RuntimeError(f"No topic titles parsed from CSV: {path}")
+    return entries
+
+
+def load_entries(path: pathlib.Path) -> List[TopicEntry]:
+    suffix = path.suffix.lower()
+    if suffix == ".md":
+        return parse_markdown(path)
+    if suffix == ".csv":
+        return parse_csv(path)
+    raise ValueError(f"Unsupported topic file type: {path}")
+
+
 def load_state(path: pathlib.Path) -> int:
     try:
         return int(path.read_text(encoding="utf-8").strip())
@@ -95,19 +134,30 @@ def produce_batch(entries: Sequence[TopicEntry], count: int) -> Tuple[List[Topic
 
 def build_message(config: Dict[str, str], batch: Sequence[TopicEntry], subject_prefix: str) -> email.message.EmailMessage:
     subject_titles = "、".join(entry.title for entry in batch)
+    has_copywriting = any((entry.pyq or entry.xhs) for entry in batch)
     body_lines: List[str] = [
         f"今日爆款选题（共 {len(batch)} 组）：",
         "",
     ]
-    for entry in batch:
-        body_lines.append(f"## {entry.title}")
+    if not has_copywriting:
+        for idx, entry in enumerate(batch, start=1):
+            body_lines.append(f"{idx}. {entry.title}")
         body_lines.append("")
-        body_lines.append("【朋友圈】")
-        body_lines.append(entry.pyq)
-        body_lines.append("")
-        body_lines.append("【小红书】")
-        body_lines.append(entry.xhs)
-        body_lines.append("")
+    else:
+        for entry in batch:
+            body_lines.append(f"## {entry.title}")
+            body_lines.append("")
+            if entry.pyq:
+                body_lines.append("【朋友圈】")
+                body_lines.append(entry.pyq)
+                body_lines.append("")
+            if entry.xhs:
+                body_lines.append("【小红书】")
+                body_lines.append(entry.xhs)
+                body_lines.append("")
+            if not entry.pyq and not entry.xhs:
+                body_lines.append("（本条仅包含标题，请根据需求扩展文案）")
+                body_lines.append("")
     body = "\n".join(body_lines).strip() + "\n"
 
     message = email.message.EmailMessage()
@@ -133,7 +183,7 @@ def main() -> None:
     args = parser.parse_args()
 
     config = load_config()
-    entries = parse_markdown(COPY_PATH)
+    entries = load_entries(COPY_PATH)
     default_count = int(os.environ.get("HOT_TOPICS_ITEMS_PER_RUN", DEFAULT_CONFIG["items_per_run"]))
     batch_count = args.count if args.count is not None else default_count
     batch, next_state = produce_batch(entries, batch_count)
