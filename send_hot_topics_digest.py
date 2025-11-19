@@ -2,8 +2,9 @@
 """
 Daily digest sender for hot-topic ideas.
 
-Supports the original Markdown copywriting source as well as the new
-`AI_Knowledge_Paid_Courses_Chinese.csv` list of 课程选题，并按照轮询发送。
+Supports the original Markdown copywriting source, the legacy
+`AI_Knowledge_Paid_Courses_Chinese.csv` list, and the newer
+`爆款短视频选题_100.csv` rotation with平台/标题/推荐理由/关键词字段。
 """
 from __future__ import annotations
 
@@ -30,7 +31,7 @@ DEFAULT_CONFIG = {
 }
 
 ROOT = pathlib.Path(__file__).resolve().parent
-DEFAULT_TOPIC_FILE = "AI_Knowledge_Paid_Courses_Chinese.csv"
+DEFAULT_TOPIC_FILE = "爆款短视频选题_100.csv"
 SOURCE_PATH_STRING = os.environ.get("HOT_TOPICS_SOURCE") or os.environ.get("HOT_TOPICS_MARKDOWN")
 if SOURCE_PATH_STRING:
     copy_candidate = pathlib.Path(SOURCE_PATH_STRING)
@@ -41,6 +42,7 @@ if SOURCE_PATH_STRING:
 else:
     COPY_PATH = ROOT / DEFAULT_TOPIC_FILE
 STATE_PATH = ROOT / f".hot_topics_digest_state_{COPY_PATH.stem}"
+INITIAL_START_INDEX = int(os.environ.get("HOT_TOPICS_START_INDEX", "0"))
 
 
 @dataclass
@@ -48,6 +50,9 @@ class TopicEntry:
     title: str
     pyq: str | None = None
     xhs: str | None = None
+    platform: str | None = None
+    reason: str | None = None
+    keywords: str | None = None
 
 
 def load_config() -> Dict[str, str]:
@@ -88,15 +93,48 @@ def parse_csv(path: pathlib.Path) -> List[TopicEntry]:
     if not path.exists():
         raise FileNotFoundError(f"Topic CSV file not found: {path}")
     entries: List[TopicEntry] = []
+    rows: List[List[str]] = []
     with path.open(encoding="utf-8", newline="") as fh:
         reader = csv.reader(fh)
         for row in reader:
-            if not row:
+            normalized = [col.strip().lstrip("\ufeff") for col in row]
+            if not any(normalized):
                 continue
-            title = row[0].strip()
+            rows.append(normalized)
+    if not rows:
+        raise RuntimeError(f"No topic titles parsed from CSV: {path}")
+
+    header = rows[0]
+    header_set = set(header)
+    has_detailed_columns = {"视频标题", "推荐理由"} <= header_set
+
+    if has_detailed_columns:
+        idx_title = header.index("视频标题")
+        idx_platform = header.index("平台") if "平台" in header_set else None
+        idx_reason = header.index("推荐理由") if "推荐理由" in header_set else None
+        idx_keywords = header.index("关键词") if "关键词" in header_set else None
+        for row in rows[1:]:
+            if idx_title >= len(row):
+                continue
+            title = row[idx_title].strip()
+            if not title or title == "视频标题":
+                continue
+            platform = row[idx_platform].strip() if idx_platform is not None and idx_platform < len(row) else ""
+            reason = row[idx_reason].strip() if idx_reason is not None and idx_reason < len(row) else ""
+            keywords = row[idx_keywords].strip() if idx_keywords is not None and idx_keywords < len(row) else ""
+            entries.append(
+                TopicEntry(
+                    title=title,
+                    platform=platform or None,
+                    reason=reason or None,
+                    keywords=keywords or None,
+                )
+            )
+    else:
+        start_idx = 1 if header and header[0] in {"AI课程选题", "平台"} else 0
+        for row in rows[start_idx:]:
+            title = row[0].strip() if row else ""
             if not title:
-                continue
-            if title == "AI课程选题":
                 continue
             entries.append(TopicEntry(title=title))
     if not entries:
@@ -117,7 +155,7 @@ def load_state(path: pathlib.Path) -> int:
     try:
         return int(path.read_text(encoding="utf-8").strip())
     except (OSError, ValueError):
-        return 0
+        return INITIAL_START_INDEX
 
 
 def produce_batch(entries: Sequence[TopicEntry], count: int) -> Tuple[List[TopicEntry], int]:
@@ -141,12 +179,27 @@ def build_message(config: Dict[str, str], batch: Sequence[TopicEntry], subject_p
     ]
     if not has_copywriting:
         for idx, entry in enumerate(batch, start=1):
-            body_lines.append(f"{idx}. {entry.title}")
-        body_lines.append("")
+            platform_prefix = f"[{entry.platform}] " if entry.platform else ""
+            body_lines.append(f"{idx}. {platform_prefix}{entry.title}")
+            if entry.reason:
+                body_lines.append(f"推荐理由：{entry.reason}")
+            if entry.keywords:
+                body_lines.append(f"关键词：{entry.keywords}")
+            body_lines.append("")
     else:
         for entry in batch:
             body_lines.append(f"## {entry.title}")
             body_lines.append("")
+            if entry.platform:
+                body_lines.append(f"【平台】{entry.platform}")
+                body_lines.append("")
+            if entry.reason:
+                body_lines.append("【推荐理由】")
+                body_lines.append(entry.reason)
+                body_lines.append("")
+            if entry.keywords:
+                body_lines.append(f"【关键词】{entry.keywords}")
+                body_lines.append("")
             if entry.pyq:
                 body_lines.append("【朋友圈】")
                 body_lines.append(entry.pyq)
@@ -155,7 +208,7 @@ def build_message(config: Dict[str, str], batch: Sequence[TopicEntry], subject_p
                 body_lines.append("【小红书】")
                 body_lines.append(entry.xhs)
                 body_lines.append("")
-            if not entry.pyq and not entry.xhs:
+            if not entry.pyq and not entry.xhs and not (entry.reason or entry.platform or entry.keywords):
                 body_lines.append("（本条仅包含标题，请根据需求扩展文案）")
                 body_lines.append("")
     body = "\n".join(body_lines).strip() + "\n"
