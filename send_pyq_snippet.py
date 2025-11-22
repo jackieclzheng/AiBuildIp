@@ -23,7 +23,7 @@ DEFAULT_CONFIG = {
 }
 
 ROOT = pathlib.Path(__file__).resolve().parent
-MARKDOWN_PATH = ROOT / "pyq-duhougan.md"
+MARKDOWN_PATH = ROOT / "pyq-duhougan-latest.md"
 STATE_PATH = ROOT / ".pyq_snippet_state"
 
 
