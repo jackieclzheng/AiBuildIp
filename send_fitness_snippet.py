@@ -23,8 +23,8 @@ DEFAULT_CONFIG = {
 }
 
 ROOT = pathlib.Path(__file__).resolve().parent
-MARKDOWN_PATH = ROOT / "fitness-poetic.md"
-STATE_PATH = ROOT / ".fitness_snippet_state"
+MARKDOWN_PATH = ROOT / "training_philosophy.md"
+STATE_PATH = ROOT / ".training_philosophy_state"
 
 
 def load_config() -> dict:
@@ -51,7 +51,7 @@ def load_sections(path: pathlib.Path) -> List[Tuple[str, str]]:
         if heading and body:
             sections.append((heading, body))
     if not sections:
-        raise RuntimeError("No sections found in fitness-poetic.md.")
+        raise RuntimeError("No sections found in training_philosophy.md.")
     return sections
 
 
