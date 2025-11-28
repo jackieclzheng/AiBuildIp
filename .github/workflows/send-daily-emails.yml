@@ -2,7 +2,7 @@ name: Send Daily Emails
 
 on:
   schedule:
-    - cron: '0 3 * * *'   # 11:00 China Standard Time
+    - cron: '25 23 * * *'   # 07:25 China Standard Time
 
 jobs:
   send:

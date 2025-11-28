@@ -4,7 +4,7 @@ Daily digest sender for hot-topic ideas.
 
 Supports the original Markdown copywriting source, the legacy
 `AI_Knowledge_Paid_Courses_Chinese.csv` list, and the newer
-`爆款短视频选题_100.csv` rotation with平台/标题/推荐理由/关键词字段。
+`爆款短视频选题_100.csv` rotation with平台/标题/推荐理由/关键词字段，或 `pyq-hot-topics-rotation.md` 的朋友圈/小红书文案格式。
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ DEFAULT_CONFIG = {
 }
 
 ROOT = pathlib.Path(__file__).resolve().parent
-DEFAULT_TOPIC_FILE = "爆款短视频选题_100.csv"
+DEFAULT_TOPIC_FILE = "pyq-hot-topics-rotation.md"
 SOURCE_PATH_STRING = os.environ.get("HOT_TOPICS_SOURCE") or os.environ.get("HOT_TOPICS_MARKDOWN")
 if SOURCE_PATH_STRING:
     copy_candidate = pathlib.Path(SOURCE_PATH_STRING)

@@ -2,7 +2,7 @@ name: Send Copywriting Email
 
 on:
   schedule:
-    - cron: '20 2 * * *'   # 10:20 China Standard Time
+    - cron: '5 23 * * *'   # 07:05 China Standard Time
 
 jobs:
   send-copywriting:
