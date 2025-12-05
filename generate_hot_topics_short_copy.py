@@ -84,7 +84,7 @@ def build_voiceover(topics: list[dict]) -> str:
     lines = [
         "## AI 爆款选题口播文案",
         "",
-        "节奏：钩子（1 句）→ 痛点（1 句）→ 结果（1 句）→ CTA（1 句），控制在 15-20 秒。",
+        "口播节奏：预测 → 奖励 → 损失 → 命名 → CTA，一整段约 60 秒，可直接朗读。",
         "",
     ]
     default_pain = "多数人卡在不会拆路径、不会成交、没有现成模板。"
@@ -95,12 +95,13 @@ def build_voiceover(topics: list[dict]) -> str:
         topic_id = topic["id"]
         root = _pick_root(idx)
         root_head = root.split("｜", 1)[0].rstrip("的")
-        hook = f"{title}——{root_head}的速成打法"
+        method_name = f"{root_head}快抄引擎"
         script = (
-            f"钩子：{hook}。"
-            f"痛点：{default_pain}"
-            f"结果：{deliver}，跟着抄就能上线成交。"
-            f"CTA：私信「{topic_id}」领行动版 SOP。"
+            f"预测：{title}会在今年冲上{root_head}赛道的爆款位，只要把“{sell}”拆开照做。"
+            f"奖励：我把这套打法命名为“{method_name}”，直接把{deliver}塞给你，照抄即可上线成交。"
+            f"损失：划走等半年，红利被占完，别人用这套脚本锁住用户，你只能花成倍广告费补课。"
+            f"命名：记住“{method_name}”，用它做脚本、口播、直播成交。"
+            f"CTA：现在私信「{topic_id}」领取全套 SOP 和口播词，跟着抄一天就能跑首单。"
         )
         lines.extend(
             [
