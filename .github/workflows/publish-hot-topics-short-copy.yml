@@ -1,37 +1,34 @@
-name: Publish Hot Topics Short Copy
+name: Send Hot Topics Voiceover
 
 on:
   schedule:
-    - cron: "5 22 * * *" # 06:05 China Standard Time
+    - cron: "5 22 * * *" # 06:05 China Standard Time, daily
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  publish-short-copy:
+  send-voiceover:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      - name: Generate short copy doc
-        run: python3 generate_hot_topics_short_copy.py
-
-      - name: Commit and push if changed
-        run: |
-          if git status --porcelain | grep .; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add ai-paid-hot-topics/hot-topics-short-copy.md ai-paid-hot-topics/hot-topics-voiceover.md
-            git commit -m "chore: update hot topics copy and voiceover"
-            git push
-          else
-            echo "No changes to commit"
+      - name: Send voiceover email
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          FROM_NAME: ${{ secrets.FROM_NAME }}
+          SMTP_RECIPIENT: ${{ secrets.SMTP_RECIPIENT }}
+          SUBJECT_PREFIX: "AI 口播脚本"
+          HOT_TOPICS_SOURCE: ai-paid-hot-topics/hot-topics-voiceover.md
+          HOT_TOPICS_ITEMS_PER_RUN: 1
+        run: python3 send_hot_topics_voiceover.py --count 1
