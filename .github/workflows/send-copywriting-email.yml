@@ -32,4 +32,6 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           FROM_NAME: ${{ secrets.FROM_NAME }}
           SMTP_RECIPIENT: ${{ secrets.SMTP_RECIPIENT || '274175813@qq.com' }}
+          COPYWRITING_MARKDOWN_PATH: project-copywriting-2025-12-11.md
+          COPYWRITING_STATE_PATH: .copywriting_digest_state_v2
         run: python send_copywriting_digest.py --subject-prefix "10:20自动播报"

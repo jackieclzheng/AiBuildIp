@@ -28,8 +28,25 @@ DEFAULT_CONFIG = {
 }
 
 ROOT = pathlib.Path(__file__).resolve().parent
-PROJECT_COPY_PATH = ROOT / "project-copywriting-1101V3.5.md"
-STATE_PATH = ROOT / ".copywriting_digest_state"
+
+
+def resolve_path(env_key: str, default: pathlib.Path) -> pathlib.Path:
+    """Resolve a path from env override; support relative paths from repo root."""
+    override = os.environ.get(env_key)
+    if override:
+        candidate = pathlib.Path(override)
+        if not candidate.is_absolute():
+            candidate = ROOT / candidate
+        return candidate
+    return default
+
+
+PROJECT_COPY_PATH = resolve_path(
+    "COPYWRITING_MARKDOWN_PATH", ROOT / "project-copywriting-2025-12-11.md"
+)
+STATE_PATH = resolve_path(
+    "COPYWRITING_STATE_PATH", ROOT / ".copywriting_digest_state_v2"
+)
 ITEMS_PER_RUN = int(os.environ.get("COPYWRITING_ITEMS_PER_RUN", 2))
 
 
