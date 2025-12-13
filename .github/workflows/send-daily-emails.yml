@@ -92,6 +92,8 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           FROM_NAME: ${{ secrets.FROM_NAME }}
           SMTP_RECIPIENT: ${{ secrets.SMTP_RECIPIENT }}
+          FITNESS_MARKDOWN_PATH: fitness-poetic-new-20.md
+          FITNESS_STATE_PATH: .fitness_poetic_new_state
         run: python send_fitness_snippet.py --index "$FITNESS_INDEX"
 
       - name: Mark fitness as sent

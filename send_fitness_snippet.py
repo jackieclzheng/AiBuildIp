@@ -23,8 +23,21 @@ DEFAULT_CONFIG = {
 }
 
 ROOT = pathlib.Path(__file__).resolve().parent
-MARKDOWN_PATH = ROOT / "training_philosophy.md"
-STATE_PATH = ROOT / ".training_philosophy_state"
+
+
+def resolve_path(env_key: str, default: pathlib.Path) -> pathlib.Path:
+    """Resolve a path from env override; accept relative paths from repo root."""
+    override = os.environ.get(env_key)
+    if override:
+        candidate = pathlib.Path(override)
+        if not candidate.is_absolute():
+            candidate = ROOT / candidate
+        return candidate
+    return default
+
+
+MARKDOWN_PATH = resolve_path("FITNESS_MARKDOWN_PATH", ROOT / "training_philosophy.md")
+STATE_PATH = resolve_path("FITNESS_STATE_PATH", ROOT / ".training_philosophy_state")
 
 
 def load_config() -> dict:
@@ -39,6 +52,9 @@ def load_config() -> dict:
 
 
 def load_sections(path: pathlib.Path) -> List[Tuple[str, str]]:
+    if not path.exists():
+        raise FileNotFoundError(f"Markdown file not found: {path}")
+
     text = path.read_text(encoding="utf-8")
     pattern = re.compile(
         r"(?P<heading>##\s*[^\n]+)\s*\n(?P<body>.*?)(?=\n##\s*[^\n]+|\Z)",
@@ -51,7 +67,7 @@ def load_sections(path: pathlib.Path) -> List[Tuple[str, str]]:
         if heading and body:
             sections.append((heading, body))
     if not sections:
-        raise RuntimeError("No sections found in training_philosophy.md.")
+        raise RuntimeError(f"No sections found in markdown file: {path}")
     return sections
 
 
