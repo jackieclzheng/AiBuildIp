@@ -3,6 +3,7 @@ name: Send Copywriting Email
 on:
   schedule:
     - cron: '5 23 * * *'   # 07:05 China Standard Time
+  workflow_dispatch:
 
 jobs:
   send-copywriting:
@@ -14,7 +15,7 @@ jobs:
       - name: Restore copywriting rotation state
         uses: actions/cache@v4
         with:
-          path: .copywriting_digest_state
+          path: .copywriting_digest_state_v2
           key: copywriting-digest-${{ github.run_id }}
           restore-keys: |
             copywriting-digest-

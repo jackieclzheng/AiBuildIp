@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   send-voiceover:
@@ -14,6 +14,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Restore voiceover state
+        uses: actions/cache@v4
+        with:
+          path: .hot_topics_voiceover_state_hot-topics-voiceover
+          key: hot-topics-voiceover-state-${{ github.run_id }}
+          restore-keys: |
+            hot-topics-voiceover-state-
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -32,3 +40,17 @@ jobs:
           HOT_TOPICS_SOURCE: ai-paid-hot-topics/hot-topics-voiceover.md
           HOT_TOPICS_ITEMS_PER_RUN: 1
         run: python3 send_hot_topics_voiceover.py --count 1
+
+      - name: Persist next voiceover index
+        env:
+          STATE_FILE: .hot_topics_voiceover_state_hot-topics-voiceover
+        run: |
+          if git status --porcelain "$STATE_FILE" | grep -q .; then
+            git config user.email "actions@github.com"
+            git config user.name "github-actions[bot]"
+            git add "$STATE_FILE"
+            git commit -m "chore: update voiceover state [skip ci]" || exit 0
+            git push
+          else
+            echo "No state change to persist."
+          fi
