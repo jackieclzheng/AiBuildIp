@@ -7,6 +7,13 @@ on:
 jobs:
   send-hot-topics:
     runs-on: ubuntu-latest
+    env:
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
+      SMTP_RECIPIENTS: ${{ secrets.SMTP_RECIPIENTS }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,12 +33,6 @@ jobs:
 
       - name: Send hot topic digest
         env:
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-          FROM_NAME: ${{ secrets.FROM_NAME }}
-          SMTP_RECIPIENT: ${{ secrets.SMTP_RECIPIENT }}
           HOT_TOPICS_SOURCE: ./pyq-hot-topics-rotation.md
           HOT_TOPICS_START_INDEX: 0
         run: python send_hot_topics_digest.py --count 3 --subject-prefix "9:30热点选题"

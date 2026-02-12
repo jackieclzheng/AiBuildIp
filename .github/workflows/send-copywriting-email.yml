@@ -8,6 +8,13 @@ on:
 jobs:
   send-copywriting:
     runs-on: ubuntu-latest
+    env:
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
+      SMTP_RECIPIENTS: ${{ secrets.SMTP_RECIPIENTS }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,12 +34,6 @@ jobs:
 
       - name: Send copywriting digest
         env:
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-          FROM_NAME: ${{ secrets.FROM_NAME }}
-          SMTP_RECIPIENT: ${{ secrets.SMTP_RECIPIENT || '274175813@qq.com' }}
           COPYWRITING_MARKDOWN_PATH: project-copywriting-2025-12-11.md
           COPYWRITING_STATE_PATH: .copywriting_digest_state_v2
         run: python send_copywriting_digest.py --subject-prefix "10:20自动播报"
