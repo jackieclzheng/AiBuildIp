@@ -18,12 +18,12 @@ from dataclasses import dataclass
 from typing import Dict, List, Sequence
 
 DEFAULT_CONFIG = {
-    "host": "smtp.exmail.qq.com",
-    "port": 465,
-    "username": "jackie@minteche.com",
-    "password": "zzgky2KYXtvQsDHV",
+    "host": "smtp.gmail.com",
+    "port": 587,
+    "username": "jackieclzheng@gmail.com",
+    "password": "dboqsjeqkovbqbvv",
     "from_name": "Jackie Zheng",
-    "recipient": "274175813@qq.com",
+    "recipients": ["274175813@qq.com"],
     "subject_prefix": "PyQ文案播报",
 }
 
@@ -57,18 +57,30 @@ class CopywritingEntry:
     xhs: str
 
 
+def parse_recipients(value: str | None, fallback: List[str]) -> List[str]:
+    if value:
+        items = [item.strip() for item in value.split(",") if item.strip()]
+        if items:
+            return items
+    return fallback
+
+
 def load_config() -> Dict[str, str]:
     """Load SMTP configuration from environment variables with sensible defaults."""
+    recipients = parse_recipients(
+        os.environ.get("SMTP_RECIPIENTS") or os.environ.get("SMTP_RECIPIENT"),
+        DEFAULT_CONFIG["recipients"],
+    )
     return {
         "host": os.environ.get("SMTP_HOST", DEFAULT_CONFIG["host"]),
         "port": int(os.environ.get("SMTP_PORT", DEFAULT_CONFIG["port"])),
         "username": os.environ.get("SMTP_USERNAME", DEFAULT_CONFIG["username"]),
         "password": os.environ.get("SMTP_PASSWORD", DEFAULT_CONFIG["password"]),
-        "from_name": os.environ.get("FROM_NAME", DEFAULT_CONFIG["from_name"]),
-        "recipient": os.environ.get("SMTP_RECIPIENT", DEFAULT_CONFIG["recipient"]),
-        "subject_prefix": os.environ.get(
-            "SUBJECT_PREFIX", DEFAULT_CONFIG["subject_prefix"]
-        ),
+        "from_name": os.environ.get("SMTP_FROM_NAME")
+        or os.environ.get("FROM_NAME", DEFAULT_CONFIG["from_name"]),
+        "recipients": recipients,
+        "subject_prefix": os.environ.get("SMTP_SUBJECT_PREFIX")
+        or os.environ.get("SUBJECT_PREFIX", DEFAULT_CONFIG["subject_prefix"]),
     }
 
 
@@ -151,18 +163,27 @@ def build_message(
 
     message = email.message.EmailMessage()
     message["From"] = f"{config['from_name']} <{config['username']}>"
-    message["To"] = config["recipient"]
+    message["To"] = ", ".join(config["recipients"])
     message["Subject"] = f"{subject_prefix} - {subject_titles}"
     message.set_content(body_text)
     return message
 
 
 def send_email(config: Dict[str, str], message: email.message.EmailMessage) -> None:
-    """Send the email via SMTP over SSL."""
+    """Send the email via SMTP, using STARTTLS when required."""
     context = ssl.create_default_context()
-    with smtplib.SMTP_SSL(config["host"], config["port"], context=context, timeout=20) as smtp:
-        smtp.login(config["username"], config["password"])
-        smtp.send_message(message)
+    use_starttls = os.environ.get("SMTP_STARTTLS") == "1" or int(config["port"]) == 587
+    if use_starttls:
+        with smtplib.SMTP(config["host"], config["port"], timeout=20) as smtp:
+            smtp.ehlo()
+            smtp.starttls(context=context)
+            smtp.ehlo()
+            smtp.login(config["username"], config["password"])
+            smtp.send_message(message)
+    else:
+        with smtplib.SMTP_SSL(config["host"], config["port"], context=context, timeout=20) as smtp:
+            smtp.login(config["username"], config["password"])
+            smtp.send_message(message)
 
 
 def main() -> None:

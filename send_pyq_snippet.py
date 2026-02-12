@@ -14,12 +14,12 @@ import ssl
 from typing import List, Tuple
 
 DEFAULT_CONFIG = {
-    "host": "smtp.exmail.qq.com",
-    "port": 465,
-    "username": "jackie@minteche.com",
-    "password": "zzgky2KYXtvQsDHV",
+    "host": "smtp.gmail.com",
+    "port": 587,
+    "username": "jackieclzheng@gmail.com",
+    "password": "dboqsjeqkovbqbvv",
     "from_name": "Jackie Zheng",
-    "recipient": "274175813@qq.com",
+    "recipients": ["274175813@qq.com"],
 }
 
 ROOT = pathlib.Path(__file__).resolve().parent
@@ -27,14 +27,27 @@ MARKDOWN_PATH = ROOT / "pyq-duhougan-latest.md"
 STATE_PATH = ROOT / ".pyq_snippet_state"
 
 
+def parse_recipients(value: str | None, fallback: List[str]) -> List[str]:
+    if value:
+        items = [item.strip() for item in value.split(",") if item.strip()]
+        if items:
+            return items
+    return fallback
+
+
 def load_config() -> dict:
+    recipients = parse_recipients(
+        os.environ.get("SMTP_RECIPIENTS") or os.environ.get("SMTP_RECIPIENT"),
+        DEFAULT_CONFIG["recipients"],
+    )
     return {
         "host": os.environ.get("SMTP_HOST", DEFAULT_CONFIG["host"]),
         "port": int(os.environ.get("SMTP_PORT", DEFAULT_CONFIG["port"])),
         "username": os.environ.get("SMTP_USERNAME", DEFAULT_CONFIG["username"]),
         "password": os.environ.get("SMTP_PASSWORD", DEFAULT_CONFIG["password"]),
-        "from_name": os.environ.get("FROM_NAME", DEFAULT_CONFIG["from_name"]),
-        "recipient": os.environ.get("SMTP_RECIPIENT", DEFAULT_CONFIG["recipient"]),
+        "from_name": os.environ.get("SMTP_FROM_NAME")
+        or os.environ.get("FROM_NAME", DEFAULT_CONFIG["from_name"]),
+        "recipients": recipients,
     }
 
 
@@ -69,7 +82,7 @@ def pick_next_section(sections: List[Tuple[str, str]], state_path: pathlib.Path)
 def build_message(config: dict, subject_suffix: str, heading: str, body: str) -> email.message.EmailMessage:
     message = email.message.EmailMessage()
     message["From"] = f"{config['from_name']} <{config['username']}>"
-    message["To"] = config["recipient"]
+    message["To"] = ", ".join(config["recipients"])
     message["Subject"] = f"PyQ日更分享 - {subject_suffix}"
     message.set_content(f"{heading}\n\n{body}")
     return message
@@ -77,9 +90,18 @@ def build_message(config: dict, subject_suffix: str, heading: str, body: str) ->
 
 def send_email(config: dict, message: email.message.EmailMessage) -> None:
     context = ssl.create_default_context()
-    with smtplib.SMTP_SSL(config["host"], config["port"], context=context, timeout=20) as smtp:
-        smtp.login(config["username"], config["password"])
-        smtp.send_message(message)
+    use_starttls = os.environ.get("SMTP_STARTTLS") == "1" or int(config["port"]) == 587
+    if use_starttls:
+        with smtplib.SMTP(config["host"], config["port"], timeout=20) as smtp:
+            smtp.ehlo()
+            smtp.starttls(context=context)
+            smtp.ehlo()
+            smtp.login(config["username"], config["password"])
+            smtp.send_message(message)
+    else:
+        with smtplib.SMTP_SSL(config["host"], config["port"], context=context, timeout=20) as smtp:
+            smtp.login(config["username"], config["password"])
+            smtp.send_message(message)
 
 
 def main() -> None:
