@@ -27,6 +27,14 @@ MARKDOWN_PATH = ROOT / "pyq-duhougan-latest.md"
 STATE_PATH = ROOT / ".pyq_snippet_state"
 
 
+def env_value(*candidates: str) -> str:
+    for key in candidates:
+        value = os.environ.get(key, "").strip()
+        if value:
+            return value
+    return ""
+
+
 def parse_recipients(value: str | None, fallback: List[str]) -> List[str]:
     if value:
         items = [item.strip() for item in value.split(",") if item.strip()]
@@ -37,16 +45,15 @@ def parse_recipients(value: str | None, fallback: List[str]) -> List[str]:
 
 def load_config() -> dict:
     recipients = parse_recipients(
-        os.environ.get("SMTP_RECIPIENTS") or os.environ.get("SMTP_RECIPIENT"),
+        env_value("SMTP_RECIPIENTS", "SMTP_RECIPIENT", "CODEX_SMTP_RECIPIENTS", "CODEX_SMTP_RECIPIENT", "GMAIL_RECIPIENTS", "GMAIL_RECIPIENT"),
         DEFAULT_CONFIG["recipients"],
     )
     return {
-        "host": os.environ.get("SMTP_HOST", DEFAULT_CONFIG["host"]),
-        "port": int(os.environ.get("SMTP_PORT", DEFAULT_CONFIG["port"])),
-        "username": os.environ.get("SMTP_USERNAME", DEFAULT_CONFIG["username"]),
-        "password": os.environ.get("SMTP_PASSWORD", DEFAULT_CONFIG["password"]),
-        "from_name": os.environ.get("SMTP_FROM_NAME")
-        or os.environ.get("FROM_NAME", DEFAULT_CONFIG["from_name"]),
+        "host": env_value("SMTP_HOST", "CODEX_SMTP_HOST", "GMAIL_HOST") or DEFAULT_CONFIG["host"],
+        "port": int(env_value("SMTP_PORT", "CODEX_SMTP_PORT", "GMAIL_PORT") or DEFAULT_CONFIG["port"]),
+        "username": env_value("SMTP_USERNAME", "CODEX_SMTP_USERNAME", "GMAIL_USERNAME") or DEFAULT_CONFIG["username"],
+        "password": env_value("SMTP_PASSWORD", "CODEX_SMTP_PASSWORD", "GMAIL_PASSWORD") or DEFAULT_CONFIG["password"],
+        "from_name": env_value("SMTP_FROM_NAME", "CODEX_SMTP_FROM_NAME", "GMAIL_FROM_NAME") or DEFAULT_CONFIG["from_name"],
         "recipients": recipients,
     }
 

@@ -8,12 +8,13 @@ jobs:
   send-hot-topics:
     runs-on: ubuntu-latest
     env:
-      SMTP_HOST: ${{ secrets.SMTP_HOST }}
-      SMTP_PORT: ${{ secrets.SMTP_PORT }}
-      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-      SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
-      SMTP_RECIPIENTS: ${{ secrets.SMTP_RECIPIENTS }}
+      SMTP_HOST: ${{ secrets.CODEX_SMTP_HOST || secrets.GMAIL_HOST || secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.CODEX_SMTP_PORT || secrets.GMAIL_PORT || secrets.SMTP_PORT }}
+      SMTP_USERNAME: ${{ secrets.CODEX_SMTP_USERNAME || secrets.GMAIL_USERNAME || secrets.SMTP_USERNAME }}
+      SMTP_PASSWORD: ${{ secrets.CODEX_SMTP_PASSWORD || secrets.GMAIL_PASSWORD || secrets.SMTP_PASSWORD }}
+      SMTP_FROM_NAME: ${{ secrets.CODEX_SMTP_FROM_NAME || secrets.GMAIL_FROM_NAME || secrets.SMTP_FROM_NAME }}
+      SMTP_RECIPIENTS: ${{ secrets.CODEX_SMTP_RECIPIENTS || secrets.GMAIL_RECIPIENTS || secrets.SMTP_RECIPIENTS }}
+      SMTP_SUBJECT_PREFIX: ${{ secrets.CODEX_SMTP_SUBJECT_PREFIX || secrets.GMAIL_SUBJECT_PREFIX || secrets.SMTP_SUBJECT_PREFIX }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
