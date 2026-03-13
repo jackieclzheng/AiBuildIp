@@ -17,7 +17,7 @@ DEFAULT_CONFIG = {
     "host": "smtp.gmail.com",
     "port": 587,
     "username": "jackieclzheng@gmail.com",
-    "password": "dboqsjeqkovbqbvv",
+    "password": "lgjxlgdubragputi",
     "from_name": "Jackie Zheng",
     "recipients": ["274175813@qq.com"],
 }
