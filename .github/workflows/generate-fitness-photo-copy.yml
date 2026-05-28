@@ -1,0 +1,82 @@
+name: Generate Fitness Photo Copy
+
+on:
+  push:
+    paths:
+      - 'fitness-photos/**'
+  workflow_dispatch:
+    inputs:
+      images:
+        description: 'Optional comma-separated image paths under fitness-photos/'
+        required: false
+        type: string
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || secrets.CODEX_OPENAI_API_KEY }}
+      OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+      OPENAI_MODEL: ${{ vars.FITNESS_COPY_MODEL || 'gpt-4.1-mini' }}
+      SMTP_HOST: ${{ secrets.CODEX_SMTP_HOST || secrets.GMAIL_HOST || secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.CODEX_SMTP_PORT || secrets.GMAIL_PORT || secrets.SMTP_PORT }}
+      SMTP_USERNAME: ${{ secrets.CODEX_SMTP_USERNAME || secrets.GMAIL_USERNAME || secrets.SMTP_USERNAME }}
+      SMTP_PASSWORD: ${{ secrets.CODEX_SMTP_PASSWORD || secrets.GMAIL_PASSWORD || secrets.SMTP_PASSWORD }}
+      SMTP_FROM_NAME: ${{ secrets.CODEX_SMTP_FROM_NAME || secrets.GMAIL_FROM_NAME || secrets.SMTP_FROM_NAME }}
+      SMTP_RECIPIENTS: ${{ secrets.CODEX_SMTP_RECIPIENTS || secrets.GMAIL_RECIPIENTS || secrets.SMTP_RECIPIENTS }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Validate config
+        run: |
+          for key in OPENAI_API_KEY SMTP_HOST SMTP_PORT SMTP_USERNAME SMTP_PASSWORD SMTP_RECIPIENTS; do
+            if [ -z "${!key}" ]; then
+              echo "::error::Missing ${key}."
+              exit 1
+            fi
+          done
+
+      - name: Collect uploaded fitness photos
+        id: photos
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.images }}" ]; then
+            printf '%s\n' "${{ inputs.images }}" | tr ',' '\n' | sed 's/^ *//;s/ *$//' > .fitness_photo_candidates
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            BEFORE="${{ github.event.before }}"
+            if [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+              git ls-files 'fitness-photos/**' > .fitness_photo_candidates
+            else
+              git diff --name-only "$BEFORE" "$GITHUB_SHA" -- 'fitness-photos/**' > .fitness_photo_candidates
+            fi
+          else
+            git ls-files 'fitness-photos/**' | tail -5 > .fitness_photo_candidates
+          fi
+
+          grep -Ei '\.(jpe?g|png|webp)$' .fitness_photo_candidates | sort -u > .fitness_photo_images || true
+          if [ ! -s .fitness_photo_images ]; then
+            echo "No supported fitness photos found."
+            echo "has_images=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "has_images=true" >> "$GITHUB_OUTPUT"
+          echo "Images to process:"
+          cat .fitness_photo_images
+
+      - name: Generate and email black-style copy
+        if: steps.photos.outputs.has_images == 'true'
+        run: |
+          python3 generate_fitness_photo_copy.py \
+            --image-list .fitness_photo_images \
+            --out output/fitness-photo-copy.md \
+            --email
+
+      - name: Upload generated copy artifact
+        if: steps.photos.outputs.has_images == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fitness-photo-copy
+          path: output/fitness-photo-copy.md
