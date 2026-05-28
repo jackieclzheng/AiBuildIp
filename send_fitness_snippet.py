@@ -44,8 +44,8 @@ def resolve_path(env_key: str, default: pathlib.Path) -> pathlib.Path:
     return default
 
 
-MARKDOWN_PATH = resolve_path("FITNESS_MARKDOWN_PATH", ROOT / "training_philosophy.md")
-STATE_PATH = resolve_path("FITNESS_STATE_PATH", ROOT / ".training_philosophy_state")
+MARKDOWN_PATH = resolve_path("FITNESS_MARKDOWN_PATH", ROOT / "fitness-poetic.md")
+STATE_PATH = resolve_path("FITNESS_STATE_PATH", ROOT / ".fitness_snippet_state")
 
 
 def parse_recipients(value: str | None, fallback: List[str]) -> List[str]:

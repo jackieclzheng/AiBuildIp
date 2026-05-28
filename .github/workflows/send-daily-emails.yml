@@ -86,8 +86,8 @@ jobs:
       - name: Send fitness snippet
         if: steps.cache-fitness.outputs.cache-hit != 'true'
         env:
-          FITNESS_MARKDOWN_PATH: fitness-poetic-new-20.md
-          FITNESS_STATE_PATH: .fitness_poetic_new_state
+          FITNESS_MARKDOWN_PATH: fitness-poetic.md
+          FITNESS_STATE_PATH: .fitness_snippet_state
         run: python send_fitness_snippet.py --index "$FITNESS_INDEX"
 
       - name: Mark fitness as sent
