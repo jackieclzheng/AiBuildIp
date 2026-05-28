@@ -12,6 +12,8 @@ jobs:
       START_DATE: '2024-11-01'
       PYQ_OFFSET: '0'
       FITNESS_OFFSET: '18'  # shift rotation so 2025-11-18 sends第11篇
+      FITNESS_MARKDOWN_PATH: fitness-poetic.md
+      FITNESS_STATE_PATH: .fitness_snippet_state
       SMTP_HOST: ${{ secrets.CODEX_SMTP_HOST || secrets.GMAIL_HOST || secrets.SMTP_HOST }}
       SMTP_PORT: ${{ secrets.CODEX_SMTP_PORT || secrets.GMAIL_PORT || secrets.SMTP_PORT }}
       SMTP_USERNAME: ${{ secrets.CODEX_SMTP_USERNAME || secrets.GMAIL_USERNAME || secrets.SMTP_USERNAME }}
@@ -83,11 +85,17 @@ jobs:
         if: steps.cache-fitness.outputs.cache-hit == 'true'
         run: echo "Fitness email already sent for ${{ steps.today.outputs.today }}; skipping."
 
+      - name: Validate black-style fitness source
+        if: steps.cache-fitness.outputs.cache-hit != 'true'
+        run: |
+          if [ "$FITNESS_MARKDOWN_PATH" != "fitness-poetic.md" ]; then
+            echo "::error::Fitness email must use fitness-poetic.md, got $FITNESS_MARKDOWN_PATH"
+            exit 1
+          fi
+          python -c 'from pathlib import Path; from send_fitness_snippet import load_sections; source = Path("fitness-poetic.md"); sections = load_sections(source); assert len(sections) >= 30, f"Expected at least 30 fitness sections, got {len(sections)}"; assert "执行感" in sections[0][0] and "执行系统" in sections[0][1], "fitness-poetic.md does not look like the approved black-style version"; print(f"Validated {source} with {len(sections)} sections.")'
+
       - name: Send fitness snippet
         if: steps.cache-fitness.outputs.cache-hit != 'true'
-        env:
-          FITNESS_MARKDOWN_PATH: fitness-poetic.md
-          FITNESS_STATE_PATH: .fitness_snippet_state
         run: python send_fitness_snippet.py --index "$FITNESS_INDEX"
 
       - name: Mark fitness as sent
